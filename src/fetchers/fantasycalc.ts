@@ -19,5 +19,9 @@ export async function fetchFantasyCalcValues(isSuperflex: boolean): Promise<Calc
     return [];
   }
   const data = (await res.json()) as FantasyCalcResponse[];
-  return data.map((e) => ({ name: e.player.name, sleeperId: e.player.maybeSleeperId, value: e.value }));
+  return data.map((e) => ({
+    name: e.player.name,
+    ...(e.player.maybeSleeperId ? { sleeperId: e.player.maybeSleeperId } : {}),
+    value: e.value,
+  }));
 }
