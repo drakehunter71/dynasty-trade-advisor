@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "fetch": "tsx src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
