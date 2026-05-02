@@ -20,7 +20,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const OVERRIDE_FILE = path.join(__dirname, '..', 'picks-override.json');
 
-type PicksOverride = Record<string, Record<string, DraftPick[]>>;
+interface TeamPicksOverride {
+  add?: DraftPick[];
+  remove?: { season: string; round: number; originalOwnerName: string }[];
+}
+// Supports both legacy array format and new {add, remove} format
+type PicksOverride = Record<string, Record<string, DraftPick[] | TeamPicksOverride>>;
 
 function loadPicksOverride(): PicksOverride {
   if (!fs.existsSync(OVERRIDE_FILE)) return {};
@@ -37,10 +42,36 @@ function applyPicksOverrides(leagueData: League[], overrides: PicksOverride): vo
     const leagueOverride = overrides[league.name];
     if (!leagueOverride) continue;
     for (const team of league.teams) {
-      const teamOverride = leagueOverride[team.ownerName];
-      if (!teamOverride) continue;
-      team.picks = teamOverride;
-      console.log(`  Applied picks override for ${team.ownerName} in ${league.name}`);
+      const raw = leagueOverride[team.ownerName];
+      if (!raw) continue;
+
+      // Support both legacy array format and new {add, remove} format
+      const toAdd: DraftPick[] = Array.isArray(raw) ? raw : (raw as TeamPicksOverride).add ?? [];
+      const toRemove = Array.isArray(raw) ? [] : (raw as TeamPicksOverride).remove ?? [];
+
+      // Remove picks by season+round+originalOwner key
+      if (toRemove.length > 0) {
+        const removeKeys = new Set(toRemove.map((r) => `${r.season}-${r.round}-${r.originalOwnerName}`));
+        const before = team.picks.length;
+        team.picks = team.picks.filter(
+          (p) => !removeKeys.has(`${p.season}-${p.round}-${p.originalOwnerName}`)
+        );
+        const removed = before - team.picks.length;
+        if (removed > 0) console.log(`  Removed ${removed} pick(s) for ${team.ownerName} in ${league.name}`);
+      }
+
+      // Add missing picks (patch-style — won't duplicate)
+      const existingKeys = new Set(team.picks.map((p) => `${p.season}-${p.round}-${p.originalOwnerName}`));
+      let added = 0;
+      for (const pick of toAdd) {
+        const key = `${pick.season}-${pick.round}-${pick.originalOwnerName}`;
+        if (!existingKeys.has(key)) {
+          team.picks.push(pick);
+          existingKeys.add(key);
+          added++;
+        }
+      }
+      if (added > 0) console.log(`  Added ${added} pick(s) for ${team.ownerName} in ${league.name}`);
     }
   }
 }
@@ -204,11 +235,17 @@ async function main(): Promise<void> {
       league.tePremium
     );
 
+    const NO_VALUE_POSITIONS = new Set(['K', 'DEF']);
     for (const team of league.teams) {
       for (const rp of team.roster) {
-        rp.values = resolvePlayerValues(rp.player.sleeperId, rp.player.name, sourceDefs);
+        // K and DEF don't have meaningful dynasty trade values — leave at normalized: 0
+        if (!NO_VALUE_POSITIONS.has(rp.player.position)) {
+          rp.values = resolvePlayerValues(rp.player.sleeperId, rp.player.name, sourceDefs);
+        }
       }
-      team.totalRosterValue = team.roster.reduce((sum, rp) => sum + rp.values.normalized, 0);
+      team.totalRosterValue = team.roster
+        .filter((rp) => !NO_VALUE_POSITIONS.has(rp.player.position))
+        .reduce((sum, rp) => sum + rp.values.normalized, 0);
       team.winWindow = inferWinWindow(team.roster, team.picks);
     }
   }

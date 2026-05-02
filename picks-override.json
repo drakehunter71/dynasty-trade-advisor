@@ -1,15 +1,25 @@
 {
-  "_comment": "Override stale Sleeper traded_picks API data. Key = league name, value = map of ownerName to correct pick list. Replaces that team's picks entirely. Run npm run fetch to apply.",
+  "_comment": "Patch-style overrides for Sleeper traded_picks API gaps. Use 'add' for picks Sleeper doesn't know about yet, 'remove' for picks Sleeper shows incorrectly.",
   "Dynasty": {
-    "bdbsmith": [
-      { "season": "2026", "round": 2, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2027", "round": 1, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2027", "round": 2, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2027", "round": 3, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2027", "round": 1, "originalOwnerName": "TrevonH33", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2028", "round": 1, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2028", "round": 2, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 },
-      { "season": "2028", "round": 3, "originalOwnerName": "bdbsmith", "currentOwnerName": "bdbsmith", "currentOwnerRosterId": -1 }
-    ]
+    "bdbsmith": {
+      "remove": [
+        {
+          "_note": "Gave own 2026 1st to trentmack for Judkins — Sleeper not reflecting this trade yet",
+          "season": "2026",
+          "round": 1,
+          "originalOwnerName": "bdbsmith"
+        }
+      ],
+      "add": [
+        {
+          "_note": "Acquired TrevonH33's 2027 1st — trade not yet synced in Sleeper",
+          "season": "2027",
+          "round": 1,
+          "originalOwnerName": "TrevonH33",
+          "currentOwnerName": "bdbsmith",
+          "currentOwnerRosterId": -1
+        }
+      ]
+    }
   }
 }

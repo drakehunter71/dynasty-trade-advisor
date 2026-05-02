@@ -1,0 +1,27 @@
+{
+  "_comment": "Devy roster for Quarantining league. Manually maintained from Google Sheet. Update after devy trades.",
+  "league": "Quarantining",
+  "players": [
+    { "owner": "Bru83",        "name": "Darian Mensah",    "position": "QB", "draftYear": 2027 },
+    { "owner": "Bru83",        "name": "Jayden Maiava",    "position": "QB", "draftYear": 2027 },
+    { "owner": "frybag",       "name": "CJ Carr",          "position": "QB", "draftYear": 2027 },
+    { "owner": "frybag",       "name": "Jordan Baugh",     "position": "RB", "draftYear": 2027 },
+    { "owner": "PaddleDaddy64","name": "Ahmad Hardy",      "position": "RB", "draftYear": 2027 },
+    { "owner": "PaddleDaddy64","name": "Julian Sayin",     "position": "QB", "draftYear": 2027 },
+    { "owner": "DirtyMike7",   "name": "Drew Mestemaker",  "position": "QB", "draftYear": 2027 },
+    { "owner": "DirtyMike7",   "name": "Nate Frazier",     "position": "RB", "draftYear": 2027 },
+    { "owner": "Lonestar737",  "name": "TJ Moore",         "position": "WR", "draftYear": 2027 },
+    { "owner": "Lonestar737",  "name": "Dakorien Moore",   "position": "WR", "draftYear": 2028 },
+    { "owner": "bdbsmith",     "name": "Malachi Toney",    "position": "WR", "draftYear": 2028 },
+    { "owner": "bdbsmith",     "name": "Bo Jackson",       "position": "WR", "draftYear": 2028, "college": "Ohio State" },
+    { "owner": "aln10e",       "name": "Arch Manning",     "position": "QB", "draftYear": 2027 },
+    { "owner": "Tincher32",    "name": "Bryce Underwood",  "position": "QB", "draftYear": 2028 },
+    { "owner": "Tincher32",    "name": "Jeremiah Smith",   "position": "WR", "draftYear": 2027 },
+    { "owner": "stephen1745",  "name": "Cam Coleman",      "position": "WR", "draftYear": 2027 },
+    { "owner": "trustdoyle",   "name": "Dante Moore",      "position": "QB", "draftYear": 2027 },
+    { "owner": "trustdoyle",   "name": "Ryan Williams",    "position": "WR", "draftYear": 2027 },
+    { "owner": "StephenMetz",  "name": "Kewan Lacy",       "position": "RB", "draftYear": 2027 },
+    { "owner": "sappelhans",   "name": "LaNorris Sellers", "position": "QB", "draftYear": 2027 },
+    { "owner": "sappelhans",   "name": "Justice Haynes",   "position": "RB", "draftYear": 2027 }
+  ]
+}
