@@ -4,13 +4,17 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { fetchSleeperUser, fetchDynastyLeagues, fetchAllPlayers, buildLeagueData } from './fetchers/sleeper.js';
 import { fetchFantasyCalcValues } from './fetchers/fantasycalc.js';
-import { fetchKtcValues } from './fetchers/keeptradecut.js';
+import { fetchAllKtcVariants } from './fetchers/keeptradecut.js';
 import { fetchDynastyProcessValues } from './fetchers/dynastyprocess.js';
+import { fetchDynastyNerdsValues } from './fetchers/dynastynerds.js';
+import { fetchAllFantasyProsVariants } from './fetchers/fantasypros.js';
 import { resolvePlayerValues } from './normalize.js';
 import { inferWinWindow } from './win-window.js';
 import { formatSnapshot } from './format-summary.js';
 import { buildLeagueState } from './format-league-state.js';
-import type { Snapshot, CalcPlayerValue, DraftPick } from './types.js';
+import type { Snapshot, League, CalcPlayerValue, DraftPick, SleeperPlayerData, ScoringFormat } from './types.js';
+import type { DynastyNerdsVariant } from './fetchers/dynastynerds.js';
+import type { FantasyProsVariant } from './fetchers/fantasypros.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -28,7 +32,7 @@ function loadPicksOverride(): PicksOverride {
   }
 }
 
-function applyPicksOverrides(leagueData: import('./types.js').League[], overrides: PicksOverride): void {
+function applyPicksOverrides(leagueData: League[], overrides: PicksOverride): void {
   for (const league of leagueData) {
     const leagueOverride = overrides[league.name];
     if (!leagueOverride) continue;
@@ -39,6 +43,80 @@ function applyPicksOverrides(leagueData: import('./types.js').League[], override
       console.log(`  Applied picks override for ${team.ownerName} in ${league.name}`);
     }
   }
+}
+
+/**
+ * Extract Sleeper community search rank as a value signal.
+ * search_rank is inverted: lower rank = more popular/valuable.
+ * We cap at 500 and invert so rank 1 → 499, rank 499 → 1.
+ */
+const SLEEPER_RANK_CAP = 500;
+const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
+
+function extractSleeperRanks(allPlayers: Record<string, SleeperPlayerData>): CalcPlayerValue[] {
+  return Object.entries(allPlayers)
+    .filter(([, p]) =>
+      p.search_rank !== undefined &&
+      p.search_rank > 0 &&
+      p.search_rank <= SLEEPER_RANK_CAP &&
+      p.position !== undefined &&
+      VALID_POSITIONS.has(p.position)
+    )
+    .map(([id, p]) => ({
+      sleeperId: id,
+      name: p.full_name ?? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim(),
+      value: SLEEPER_RANK_CAP - (p.search_rank as number),
+    }))
+    .filter((p) => p.name.length > 0);
+}
+
+interface AllSources {
+  fc1QB: CalcPlayerValue[];
+  fcSF: CalcPlayerValue[];
+  ktc1QB: CalcPlayerValue[];
+  ktcSF: CalcPlayerValue[];
+  dynastyNerds: Partial<Record<DynastyNerdsVariant, CalcPlayerValue[]>>;
+  fantasyPros: Partial<Record<FantasyProsVariant, CalcPlayerValue[]>>;
+  sleeperRank: CalcPlayerValue[];
+}
+
+function buildLeagueSourceDefs(
+  sources: AllSources,
+  isSuperflex: boolean,
+  scoringFormat: ScoringFormat,
+  tePremium: boolean
+): { name: string; players: CalcPlayerValue[] }[] {
+  const defs: { name: string; players: CalcPlayerValue[] }[] = [];
+
+  // FantasyCalc: 1QB vs superflex
+  const fc = isSuperflex ? sources.fcSF : sources.fc1QB;
+  if (fc.length > 0) defs.push({ name: 'fantasyCalc', players: fc });
+
+  // KTC: 1QB vs superflex
+  const ktc = isSuperflex ? sources.ktcSF : sources.ktc1QB;
+  if (ktc.length > 0) defs.push({ name: 'ktc', players: ktc });
+
+  // Dynasty Nerds: pick best available variant
+  let dnKey: DynastyNerdsVariant;
+  if (isSuperflex && tePremium) dnKey = 'SFLEXTEP';
+  else if (isSuperflex) dnKey = 'SFLEX';
+  else if (scoringFormat === 'standard') dnKey = 'STD';
+  else dnKey = 'PPR';
+  const dn = sources.dynastyNerds[dnKey] ?? [];
+  if (dn.length > 0) defs.push({ name: 'dynastyNerds', players: dn });
+
+  // FantasyPros: pick best available variant
+  let fpKey: FantasyProsVariant;
+  if (isSuperflex) fpKey = 'sf';
+  else if (tePremium) fpKey = 'tep';
+  else fpKey = 'standard';
+  const fp = sources.fantasyPros[fpKey] ?? [];
+  if (fp.length > 0) defs.push({ name: 'fantasyPros', players: fp });
+
+  // Sleeper rank: same for all leagues
+  if (sources.sleeperRank.length > 0) defs.push({ name: 'sleeperRank', players: sources.sleeperRank });
+
+  return defs;
 }
 
 const CURRENT_SEASON = String(new Date().getFullYear());
@@ -60,31 +138,51 @@ async function main(): Promise<void> {
   const allPlayers = await fetchAllPlayers();
 
   console.log('Fetching trade calculator values...');
-  const anySuperflex = dynastyLeagues.some((l) => l.roster_positions.includes('SUPER_FLEX'));
 
-  const [fcValues, ktcValues, dpValues] = await Promise.all([
-    fetchFantasyCalcValues(anySuperflex),
-    fetchKtcValues(anySuperflex),
-    fetchDynastyProcessValues(anySuperflex),
+  // Fetch all variants in parallel
+  const [ktcVariants, dnVariants, fpVariants, dpValues] = await Promise.all([
+    fetchAllKtcVariants(),
+    fetchDynastyNerdsValues(),
+    fetchAllFantasyProsVariants(),
+    fetchDynastyProcessValues(false), // kept as fallback
   ]);
 
+  // Fetch FantasyCalc variants (need separate calls)
+  const [fc1QB, fcSF] = await Promise.all([
+    fetchFantasyCalcValues(false),
+    fetchFantasyCalcValues(true),
+  ]);
+  console.log(`FantasyCalc: 1QB=${fc1QB.length}, SF=${fcSF.length}`);
+
+  const sleeperRank = extractSleeperRanks(allPlayers);
+  console.log(`Sleeper search rank: ${sleeperRank.length} players`);
+
+  const sources: AllSources = {
+    fc1QB,
+    fcSF,
+    ktc1QB: ktcVariants.oneQB,
+    ktcSF: ktcVariants.superflex,
+    dynastyNerds: dnVariants,
+    fantasyPros: fpVariants,
+    sleeperRank,
+  };
+
+  // Determine which sources loaded
   const valueSources: string[] = [];
-  if (fcValues.length > 0) valueSources.push('FantasyCalc');
-  if (ktcValues.length > 0) valueSources.push('KTC');
+  if (fc1QB.length > 0 || fcSF.length > 0) valueSources.push('FantasyCalc');
+  // Only count KTC if it loaded a meaningful number of players (>50)
+  if (ktcVariants.oneQB.length > 50 || ktcVariants.superflex.length > 50) valueSources.push('KTC');
+  else if (ktcVariants.oneQB.length > 0) console.warn(`KTC: only ${ktcVariants.oneQB.length} players loaded — site may have changed, skipping as value source`);
+  if (Object.keys(dnVariants).length > 0) valueSources.push('DynastyNerds');
+  if (Object.keys(fpVariants).length > 0) valueSources.push('FantasyPros');
+  if (sleeperRank.length > 0) valueSources.push('SleeperRank');
   if (dpValues.length > 0) valueSources.push('DynastyProcess');
 
   console.log(`Value sources loaded: ${valueSources.join(', ') || 'none (all sources failed)'}`);
 
   if (valueSources.length === 0) {
-    console.warn('Warning: all value sources failed. Output will have normalized:0 for all players — not useful for trade analysis.');
-    // Don't exit — still write the snapshot so the user knows their leagues loaded
+    console.warn('Warning: all value sources failed. Output will have normalized:0 — not useful for trade analysis.');
   }
-
-  const sourceDefs: { name: string; players: CalcPlayerValue[] }[] = [
-    { name: 'fantasyCalc', players: fcValues },
-    { name: 'ktc', players: ktcValues },
-    { name: 'dynastyProcess', players: dpValues },
-  ];
 
   console.log('Building league snapshots...');
   const leagueData = await Promise.all(
@@ -97,7 +195,15 @@ async function main(): Promise<void> {
     applyPicksOverrides(leagueData, picksOverride);
   }
 
+  // Inject trade values per league using the correct scoring variant
   for (const league of leagueData) {
+    const sourceDefs = buildLeagueSourceDefs(
+      sources,
+      league.isSuperflex,
+      league.scoringFormat,
+      league.tePremium
+    );
+
     for (const team of league.teams) {
       for (const rp of team.roster) {
         rp.values = resolvePlayerValues(rp.player.sleeperId, rp.player.name, sourceDefs);
@@ -116,10 +222,6 @@ async function main(): Promise<void> {
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(path.join(DATA_DIR, 'snapshot.json'), JSON.stringify(snapshot, null, 2));
-  console.log('Wrote data/snapshot.json');
-
-  const summary = formatSnapshot(snapshot);
-  fs.writeFileSync(path.join(DATA_DIR, 'summary.md'), summary);
   console.log('Wrote data/snapshot.json');
 
   const leagueState = buildLeagueState(snapshot);

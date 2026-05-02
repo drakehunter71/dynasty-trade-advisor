@@ -16,7 +16,10 @@ export interface Player {
 export interface TradeValues {
   fantasyCalc?: number;
   ktc?: number;
-  dynastyProcess?: number;
+  dynastyNerds?: number;
+  fantasyPros?: number;
+  sleeperRank?: number;
+  dynastyProcess?: number; // kept for backward compat — source is currently down
   normalized: number;
 }
 
@@ -106,6 +109,7 @@ export interface SleeperPlayerData {
   team?: string | null;
   age?: number;
   years_exp?: number;
+  search_rank?: number; // community search popularity — lower = more searched
 }
 
 export interface SleeperTradedPick {

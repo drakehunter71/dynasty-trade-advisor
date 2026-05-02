@@ -52,10 +52,10 @@ export function resolvePlayerValues(
     ? Math.round(normalized100s.reduce((a, b) => a + b, 0) / normalized100s.length)
     : 0;
 
-  return {
-    ...(resolved['fantasyCalc'] !== undefined ? { fantasyCalc: resolved['fantasyCalc'] } : {}),
-    ...(resolved['ktc'] !== undefined ? { ktc: resolved['ktc'] } : {}),
-    ...(resolved['dynastyProcess'] !== undefined ? { dynastyProcess: resolved['dynastyProcess'] } : {}),
-    normalized: avg,
-  };
+  // Dynamically spread all resolved source values — works for any source name
+  const sourceValues = Object.fromEntries(
+    Object.entries(resolved).filter(([, v]) => v !== undefined)
+  ) as Omit<TradeValues, 'normalized'>;
+
+  return { ...sourceValues, normalized: avg };
 }

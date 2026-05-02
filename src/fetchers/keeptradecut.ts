@@ -38,6 +38,15 @@ export function parseKtcHtml(html: string, isSuperflex = false): CalcPlayerValue
     .filter((p): p is CalcPlayerValue => p !== null);
 }
 
+export async function fetchAllKtcVariants(): Promise<{ oneQB: CalcPlayerValue[]; superflex: CalcPlayerValue[] }> {
+  const [oneQB, superflex] = await Promise.all([
+    fetchKtcValues(false),
+    fetchKtcValues(true),
+  ]);
+  console.log(`KTC: 1QB=${oneQB.length}, SF=${superflex.length}`);
+  return { oneQB, superflex };
+}
+
 export async function fetchKtcValues(isSuperflex = false): Promise<CalcPlayerValue[]> {
   const url = 'https://keeptradecut.com/dynasty-rankings?filters=QB|WR|RB|TE|RDP&format=2&numQBs=1';
   let res: Response;
