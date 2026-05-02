@@ -75,7 +75,8 @@ function buildPicksPerRoster(
   rosterIdToOwner: Map<number, { name: string; teamName: string }>,
   leagueSeason: number,
 ): Map<number, DraftPick[]> {
-  const currentYear = leagueSeason;
+  // Use the later of leagueSeason vs wall-clock year so seeding always matches win-window.ts's filter.
+  const currentYear = Math.max(leagueSeason, new Date().getFullYear());
 
   // ownership map: `${season}-${round}-${originalRosterId}` → { currentOwnerRosterId }
   const ownershipMap = new Map<string, { currentOwnerRosterId: number }>();

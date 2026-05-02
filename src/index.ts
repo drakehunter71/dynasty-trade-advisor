@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { fetchSleeperUser, fetchDynastyLeagues, fetchAllPlayers, buildLeagueData } from './fetchers/sleeper.js';
 import { fetchFantasyCalcValues } from './fetchers/fantasycalc.js';
 import { fetchKtcValues } from './fetchers/keeptradecut.js';
@@ -8,6 +10,9 @@ import { resolvePlayerValues } from './normalize.js';
 import { inferWinWindow } from './win-window.js';
 import { formatSnapshot } from './format-summary.js';
 import type { Snapshot, CalcPlayerValue } from './types.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = path.join(__dirname, '..', 'data');
 
 const CURRENT_SEASON = String(new Date().getFullYear());
 
@@ -43,6 +48,11 @@ async function main(): Promise<void> {
 
   console.log(`Value sources loaded: ${valueSources.join(', ') || 'none (all sources failed)'}`);
 
+  if (valueSources.length === 0) {
+    console.warn('Warning: all value sources failed. Output will have normalized:0 for all players — not useful for trade analysis.');
+    // Don't exit — still write the snapshot so the user knows their leagues loaded
+  }
+
   const sourceDefs: { name: string; players: CalcPlayerValue[] }[] = [
     { name: 'fantasyCalc', players: fcValues },
     { name: 'ktc', players: ktcValues },
@@ -71,12 +81,12 @@ async function main(): Promise<void> {
     valueSources,
   };
 
-  fs.mkdirSync('data', { recursive: true });
-  fs.writeFileSync('data/snapshot.json', JSON.stringify(snapshot, null, 2));
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DATA_DIR, 'snapshot.json'), JSON.stringify(snapshot, null, 2));
   console.log('Wrote data/snapshot.json');
 
   const summary = formatSnapshot(snapshot);
-  fs.writeFileSync('data/summary.md', summary);
+  fs.writeFileSync(path.join(DATA_DIR, 'summary.md'), summary);
   console.log('Wrote data/summary.md');
 
   console.log('\nDone. Load data/summary.md into Claude Code context for trade analysis.');

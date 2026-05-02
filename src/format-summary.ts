@@ -99,7 +99,7 @@ export function formatSnapshot(snapshot: Snapshot): string {
 
   lines.push('# Dynasty Trade Snapshot');
   lines.push('');
-  lines.push(`**Generated:** ${snapshot.createdAt}`);
+  lines.push(`**Generated:** ${new Date(snapshot.createdAt).toLocaleString()}`);
   lines.push(`**Value Sources:** ${snapshot.valueSources.join(', ')}`);
   lines.push('');
   lines.push(

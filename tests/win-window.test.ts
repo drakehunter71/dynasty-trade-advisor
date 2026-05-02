@@ -55,4 +55,9 @@ describe('inferWinWindow', () => {
     ];
     expect(inferWinWindow(roster, [])).toBe('developing');
   });
+
+  it('returns developing for roster with avgAge of 22', () => {
+    const roster = Array.from({ length: 8 }, (_, i) => makePlayer(`p${i}`, 22, 50 + i));
+    expect(inferWinWindow(roster, [])).toBe('developing');
+  });
 });
