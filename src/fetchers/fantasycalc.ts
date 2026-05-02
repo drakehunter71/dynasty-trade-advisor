@@ -1,12 +1,14 @@
 import type { CalcPlayerValue } from '../types.js';
 
 interface FantasyCalcResponse {
-  player: { name: string; maybeSleeperId?: string; position: string };
+  player: { name: string; sleeperId?: string; maybeSleeperId?: string; position: string };
   value: number;
 }
 
 export async function fetchFantasyCalcValues(isSuperflex: boolean): Promise<CalcPlayerValue[]> {
-  const url = `https://api.fantasycalc.com/values/current?isDynasty=true&isSuperflex=${isSuperflex}`;
+  // API changed: isSuperflex replaced with numQbs (1 = 1QB, 2 = superflex)
+  const numQbs = isSuperflex ? 2 : 1;
+  const url = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${numQbs}`;
   let res: Response;
   try {
     res = await fetch(url);
@@ -19,9 +21,13 @@ export async function fetchFantasyCalcValues(isSuperflex: boolean): Promise<Calc
     return [];
   }
   const data = (await res.json()) as FantasyCalcResponse[];
-  return data.map((e) => ({
-    name: e.player.name,
-    ...(e.player.maybeSleeperId ? { sleeperId: e.player.maybeSleeperId } : {}),
-    value: e.value,
-  }));
+  return data.map((e) => {
+    // API changed: maybeSleeperId → sleeperId (keep fallback for older responses)
+    const id = e.player.sleeperId ?? e.player.maybeSleeperId;
+    return {
+      name: e.player.name,
+      ...(id ? { sleeperId: id } : {}),
+      value: e.value,
+    };
+  });
 }

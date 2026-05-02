@@ -21,12 +21,31 @@ describe('fetchFantasyCalcValues', () => {
     expect(values[0].value).toBe(9500);
   });
 
-  it('passes isSuperflex=true to URL', async () => {
+  it('passes numQbs=2 to URL for superflex', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
     await fetchFantasyCalcValues(true);
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.fantasycalc.com/values/current?isDynasty=true&isSuperflex=true'
+      'https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=2'
     );
+  });
+
+  it('passes numQbs=1 to URL for 1QB', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    await fetchFantasyCalcValues(false);
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1'
+    );
+  });
+
+  it('handles new sleeperId field (not maybeSleeperId)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { player: { name: 'Bijan Robinson', sleeperId: '9509', position: 'RB' }, value: 10994 },
+      ],
+    });
+    const values = await fetchFantasyCalcValues(false);
+    expect(values[0].sleeperId).toBe('9509');
   });
 
   it('returns [] and warns on non-ok response', async () => {

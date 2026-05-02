@@ -37,7 +37,7 @@ async function main(): Promise<void> {
 
   const [fcValues, ktcValues, dpValues] = await Promise.all([
     fetchFantasyCalcValues(anySuperflex),
-    fetchKtcValues(),
+    fetchKtcValues(anySuperflex),
     fetchDynastyProcessValues(anySuperflex),
   ]);
 

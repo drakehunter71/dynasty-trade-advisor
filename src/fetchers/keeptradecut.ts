@@ -2,13 +2,20 @@ import type { CalcPlayerValue } from '../types.js';
 
 interface KtcRawPlayer {
   playerName: string;
-  sleeperPlayerID?: string;
-  value: number;
   position: string;
+  // KTC changed structure: value is now nested under oneQBValues or superflexValues
+  oneQBValues?: { value: number };
+  superflexValues?: { value: number };
+  // Legacy field (no longer present)
+  sleeperPlayerID?: string;
+  value?: number;
 }
 
-export function parseKtcHtml(html: string): CalcPlayerValue[] {
-  const match = html.match(/var\s+playerValues\s*=\s*(\[[\s\S]*?\]);/);
+export function parseKtcHtml(html: string, isSuperflex = false): CalcPlayerValue[] {
+  // KTC renamed variable: playerValues → oneQBPlayers / superflexPlayers
+  const varName = isSuperflex ? 'superflexPlayers' : 'oneQBPlayers';
+  const pattern = new RegExp(`var\\s+${varName}\\s*=\\s*(\\[[\\s\\S]*?\\]);`);
+  const match = html.match(pattern);
   if (!match) return [];
   let data: KtcRawPlayer[];
   try {
@@ -16,14 +23,22 @@ export function parseKtcHtml(html: string): CalcPlayerValue[] {
   } catch {
     return [];
   }
-  return data.map((p) => ({
-    name: p.playerName,
-    ...(p.sleeperPlayerID ? { sleeperId: p.sleeperPlayerID } : {}),
-    value: p.value,
-  }));
+  return data
+    .map((p) => {
+      const value = isSuperflex
+        ? p.superflexValues?.value
+        : p.oneQBValues?.value ?? p.value;
+      if (value === undefined || value === 0) return null;
+      return {
+        name: p.playerName,
+        ...(p.sleeperPlayerID ? { sleeperId: p.sleeperPlayerID } : {}),
+        value,
+      };
+    })
+    .filter((p): p is CalcPlayerValue => p !== null);
 }
 
-export async function fetchKtcValues(): Promise<CalcPlayerValue[]> {
+export async function fetchKtcValues(isSuperflex = false): Promise<CalcPlayerValue[]> {
   const url = 'https://keeptradecut.com/dynasty-rankings?filters=QB|WR|RB|TE|RDP&format=2&numQBs=1';
   let res: Response;
   try {
@@ -37,7 +52,7 @@ export async function fetchKtcValues(): Promise<CalcPlayerValue[]> {
     return [];
   }
   const html = await res.text();
-  const values = parseKtcHtml(html);
+  const values = parseKtcHtml(html, isSuperflex);
   if (values.length === 0) {
     console.warn('KTC: parsed 0 players — page structure may have changed. Check src/fetchers/keeptradecut.ts');
   }
