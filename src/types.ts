@@ -29,7 +29,8 @@ export interface DraftPick {
   season: string;
   round: number;
   originalOwnerName: string;
-  currentOwnerRosterId: number;
+  currentOwnerName: string;
+  currentOwnerRosterId: number; // internal — used for grouping picks by roster in sleeper.ts
 }
 
 export interface Team {
