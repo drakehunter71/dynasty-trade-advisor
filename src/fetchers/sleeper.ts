@@ -73,10 +73,9 @@ function buildPicksPerRoster(
   rosters: SleeperRoster[],
   tradedPicks: SleeperTradedPick[],
   rosterIdToOwner: Map<number, { name: string; teamName: string }>,
+  leagueSeason: number,
 ): Map<number, DraftPick[]> {
-  // Determine the base season from current year using the first league season we can find,
-  // or fall back to the current calendar year.
-  const currentYear = new Date().getFullYear();
+  const currentYear = leagueSeason;
 
   // ownership map: `${season}-${round}-${originalRosterId}` → { currentOwnerRosterId }
   const ownershipMap = new Map<string, { currentOwnerRosterId: number }>();
@@ -180,7 +179,7 @@ export async function buildLeagueData(
   }
 
   // Step 3: Build picks per roster.
-  const picksPerRoster = buildPicksPerRoster(rosters, tradedPicks, rosterIdToOwner);
+  const picksPerRoster = buildPicksPerRoster(rosters, tradedPicks, rosterIdToOwner, parseInt(league.season, 10));
 
   // Step 4: Find my roster ID.
   const myRoster = rosters.find((r) => r.owner_id === myUserId);
