@@ -9,6 +9,7 @@ import { fetchDynastyProcessValues } from './fetchers/dynastyprocess.js';
 import { resolvePlayerValues } from './normalize.js';
 import { inferWinWindow } from './win-window.js';
 import { formatSnapshot } from './format-summary.js';
+import { buildLeagueState } from './format-league-state.js';
 import type { Snapshot, CalcPlayerValue, DraftPick } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -119,9 +120,13 @@ async function main(): Promise<void> {
 
   const summary = formatSnapshot(snapshot);
   fs.writeFileSync(path.join(DATA_DIR, 'summary.md'), summary);
-  console.log('Wrote data/summary.md');
+  console.log('Wrote data/snapshot.json');
 
-  console.log('\nDone. Load data/summary.md into Claude Code context for trade analysis.');
+  const leagueState = buildLeagueState(snapshot);
+  fs.writeFileSync(path.join(DATA_DIR, 'league-state.md'), leagueState);
+  console.log('Wrote data/league-state.md');
+
+  console.log('\nDone. Load data/league-state.md into Claude Code context for trade analysis.');
 }
 
 main().catch((err: unknown) => {
