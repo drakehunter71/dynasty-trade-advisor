@@ -9,10 +9,36 @@ import { fetchDynastyProcessValues } from './fetchers/dynastyprocess.js';
 import { resolvePlayerValues } from './normalize.js';
 import { inferWinWindow } from './win-window.js';
 import { formatSnapshot } from './format-summary.js';
-import type { Snapshot, CalcPlayerValue } from './types.js';
+import type { Snapshot, CalcPlayerValue, DraftPick } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
+const OVERRIDE_FILE = path.join(__dirname, '..', 'picks-override.json');
+
+type PicksOverride = Record<string, Record<string, DraftPick[]>>;
+
+function loadPicksOverride(): PicksOverride {
+  if (!fs.existsSync(OVERRIDE_FILE)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(OVERRIDE_FILE, 'utf8')) as PicksOverride;
+  } catch {
+    console.warn('picks-override.json is invalid JSON — skipping overrides');
+    return {};
+  }
+}
+
+function applyPicksOverrides(leagueData: import('./types.js').League[], overrides: PicksOverride): void {
+  for (const league of leagueData) {
+    const leagueOverride = overrides[league.name];
+    if (!leagueOverride) continue;
+    for (const team of league.teams) {
+      const teamOverride = leagueOverride[team.ownerName];
+      if (!teamOverride) continue;
+      team.picks = teamOverride;
+      console.log(`  Applied picks override for ${team.ownerName} in ${league.name}`);
+    }
+  }
+}
 
 const CURRENT_SEASON = String(new Date().getFullYear());
 
@@ -63,6 +89,12 @@ async function main(): Promise<void> {
   const leagueData = await Promise.all(
     dynastyLeagues.map((l) => buildLeagueData(l, user.user_id, allPlayers))
   );
+
+  const picksOverride = loadPicksOverride();
+  if (Object.keys(picksOverride).some(k => k !== '_comment')) {
+    console.log('Applying picks overrides...');
+    applyPicksOverrides(leagueData, picksOverride);
+  }
 
   for (const league of leagueData) {
     for (const team of league.teams) {

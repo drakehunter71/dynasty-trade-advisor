@@ -50,6 +50,8 @@ export interface League {
   season: string;
   scoringFormat: ScoringFormat;
   isSuperflex: boolean;
+  tePremium: boolean;
+  tePremiumAmount: number; // bonus points per TE reception (e.g. 0.5 or 1.0)
   teams: Team[];
   myRosterId: number;
 }
@@ -74,9 +76,8 @@ export interface SleeperLeague {
   status: string;
   settings: {
     type: number;
-    rec: number;
-    bonus_rec_te?: number;
   };
+  scoring_settings: Record<string, number>;
   roster_positions: string[];
 }
 

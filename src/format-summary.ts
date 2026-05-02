@@ -73,8 +73,9 @@ function formatLeague(league: League): string {
   const lines: string[] = [];
 
   const formatLabel = scoringFormatLabel(league.scoringFormat);
+  const tepLabel = league.tePremium ? ` +${league.tePremiumAmount}TE` : '';
   const sfLabel = league.isSuperflex ? ', Superflex' : '';
-  lines.push(`## League: ${league.name} (${formatLabel}${sfLabel})`);
+  lines.push(`## League: ${league.name} (${formatLabel}${tepLabel}${sfLabel})`);
   lines.push('');
 
   // Sort: my team first, then descending by totalRosterValue

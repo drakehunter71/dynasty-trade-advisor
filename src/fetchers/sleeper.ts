@@ -59,7 +59,7 @@ export async function fetchTradedPicks(leagueId: string): Promise<SleeperTradedP
 }
 
 function detectScoringFormat(league: SleeperLeague): ScoringFormat {
-  const rec = league.settings.rec;
+  const rec = league.scoring_settings?.rec ?? 0;
   if (rec === 1) return 'ppr';
   if (rec === 0.5) return 'half_ppr';
   return 'standard';
@@ -67,6 +67,11 @@ function detectScoringFormat(league: SleeperLeague): ScoringFormat {
 
 function detectSuperflex(league: SleeperLeague): boolean {
   return league.roster_positions.includes('SUPER_FLEX');
+}
+
+function detectTePremium(league: SleeperLeague): { tePremium: boolean; tePremiumAmount: number } {
+  const amount = league.scoring_settings?.bonus_rec_te ?? 0;
+  return { tePremium: amount > 0, tePremiumAmount: amount };
 }
 
 function buildPicksPerRoster(
@@ -214,12 +219,16 @@ export async function buildLeagueData(
     };
   });
 
+  const { tePremium, tePremiumAmount } = detectTePremium(league);
+
   return {
     id: league.league_id,
     name: league.name,
     season: league.season,
     scoringFormat: detectScoringFormat(league),
     isSuperflex: detectSuperflex(league),
+    tePremium,
+    tePremiumAmount,
     teams,
     myRosterId,
   };

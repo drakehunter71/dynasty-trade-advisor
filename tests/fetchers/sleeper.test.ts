@@ -52,7 +52,8 @@ describe('fetchDynastyLeagues', () => {
         name: 'Dynasty League',
         season: '2024',
         status: 'in_season',
-        settings: { type: 2, rec: 1 },
+        settings: { type: 2 },
+        scoring_settings: { rec: 1 },
         roster_positions: ['QB', 'RB', 'WR', 'TE', 'FLEX'],
       },
       {
@@ -60,7 +61,8 @@ describe('fetchDynastyLeagues', () => {
         name: 'Redraft League',
         season: '2024',
         status: 'in_season',
-        settings: { type: 0, rec: 0.5 },
+        settings: { type: 0 },
+        scoring_settings: { rec: 0.5 },
         roster_positions: ['QB', 'RB', 'WR', 'TE', 'FLEX'],
       },
       {
@@ -68,7 +70,8 @@ describe('fetchDynastyLeagues', () => {
         name: 'Keeper League',
         season: '2024',
         status: 'in_season',
-        settings: { type: 1, rec: 1 },
+        settings: { type: 1 },
+        scoring_settings: { rec: 1 },
         roster_positions: ['QB', 'RB', 'WR', 'TE', 'FLEX'],
       },
     ];
@@ -121,7 +124,8 @@ describe('buildLeagueData', () => {
     name: 'Test Dynasty',
     season: '2024',
     status: 'in_season',
-    settings: { type: 2, rec: 1 },
+    settings: { type: 2 },
+    scoring_settings: { rec: 1, bonus_rec_te: 0.5 },
     roster_positions: ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX'],
   };
 
